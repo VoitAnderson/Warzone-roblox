@@ -1,7 +1,7 @@
-# Warzone Roblox
+# Omega Protocol // Zero
 
-Battle Royale игра в Roblox Studio в стиле Call of Duty: Warzone.
-Режимы: Solo и Quads (DBNO + Гулаг), PC + геймпад.
+Тактический Battle Royale в Roblox Studio с нуля (оригинальный код и контент).
+Название: **Omega Protocol // Zero**. Режимы: Solo и Quads (DBNO + Гулаг), PC + геймпад.
 
 ## Структура проекта (Rojo)
 
