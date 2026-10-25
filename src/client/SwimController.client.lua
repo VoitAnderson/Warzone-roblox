@@ -1,9 +1,14 @@
 -- StarterPlayer > StarterPlayerScripts > Client > SwimController (LocalScript)
 -- Дыхание и утопление. Вода — через рейкаст (GetMaterialAtPosition не существует).
+--
+-- ВАЖНО: скрипт лежит в StarterPlayerScripts, поэтому персонажа берём
+-- через LocalPlayer.Character (script.Parent здесь = PlayerScripts).
 
 local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
 
-local character = script.Parent
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
 local rootPart = character:WaitForChild("HumanoidRootPart")
 
@@ -25,6 +30,8 @@ local function isHeadUnderwater()
 end
 
 RunService.Heartbeat:Connect(function(dt)
+	if not (rootPart and rootPart.Parent) then return end
+
 	local swimming = humanoid:GetState() == Enum.HumanoidStateType.Swimming
 	rootPart:SetAttribute("Swimming", swimming)
 
