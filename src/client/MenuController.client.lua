@@ -1,7 +1,10 @@
 -- StarterPlayer > StarterPlayerScripts > Client > MenuController (LocalScript)
--- AAA ГЛАВНОЕ МЕНЮ: кинематографичный тёмный фон, летящий пепел,
--- металлический заголовок, карточка игрока с аватаром, бегущая строка,
--- блюр 3D-сцены, ховер-анимации кнопок, деплой-последовательность.
+-- AAA ГЛАВНОЕ МЕНЮ v2 — по канонам топовых арт-директоров:
+-- • разрядка букв в заголовке (COD-style tracking)
+-- • параллакс глубины: 2 слоя пепла + заголовок реагируют на мышь
+-- • плёночное зерно: сканлайны + мерцание (Cyberpunk / Ash Thorp)
+-- • единая звуковая связка: ховер выше тоном, клик ниже, деплой — бас
+-- • деплой-последовательность в стиле Destiny (прогресс + вспышка)
 -- F1 — открыть/закрыть меню.
 
 local Players = game:GetService("Players")
@@ -22,7 +25,6 @@ local C_ACCENT  = Color3.fromRGB(80, 255, 120)
 local VERSION   = "v0.3.0 · PHASE 3"
 -- ==========================================
 
--- ===== GUI-КОРНИ =====
 local gui = Instance.new("ScreenGui")
 gui.Name = "MainMenu"
 gui.ResetOnSpawn = false
@@ -51,11 +53,30 @@ local function stroke(parent, color, thickness, transparency)
 	s.Parent = parent
 end
 
+-- ================== ЗВУК: единая связка ==================
+local srcSound = Instance.new("Sound")
+srcSound.SoundId = "rbxasset://sounds/electronicpingshort.wav"
+srcSound.Volume = 0.4
+srcSound.Parent = gui
+
+local function sfx(kind)
+	local p, v = 1, 0.4
+	if kind == "hover" then p, v = 1.7, 0.18
+	elseif kind == "click" then p, v = 0.9, 0.4
+	elseif kind == "deploy" then p, v = 0.55, 0.7
+	elseif kind == "back" then p, v = 1.3, 0.25
+	end
+	srcSound.PlaybackSpeed = p
+	srcSound.Volume = v
+	srcSound:Play()
+end
+
 -- ================== ФОН ==================
 local root = Instance.new("Frame")
 root.Size = UDim2.fromScale(1, 1)
 root.BackgroundColor3 = C_BG
 root.BorderSizePixel = 0
+root.ClipsDescendants = true
 root.Parent = gui
 
 local rootGrad = Instance.new("UIGradient")
@@ -67,10 +88,9 @@ rootGrad.Color = ColorSequence.new({
 })
 rootGrad.Parent = root
 
--- Виньетка: затемнение сверху и снизу
 local function vignetteBar(side)
 	local f = Instance.new("Frame")
-	f.Size = side == "Top" and UDim2.new(1, 0, 0.35, 0) or UDim2.new(1, 0, 0.35, 0)
+	f.Size = UDim2.new(1, 0, 0.35, 0)
 	f.AnchorPoint = side == "Top" and Vector2.new(0, 0) or Vector2.new(0, 1)
 	f.Position = side == "Top" and UDim2.fromScale(0, 0) or UDim2.fromScale(0, 1)
 	f.BackgroundColor3 = Color3.new(0, 0, 0)
@@ -89,58 +109,127 @@ end
 vignetteBar("Top")
 vignetteBar("Bottom")
 
--- ================== ПЕПЕЛ (частицы) ==================
+-- ================== ПЕПЕЛ: 2 слоя параллакса ==================
+local ashFar = Instance.new("Frame")
+ashFar.Size = UDim2.fromScale(1.1, 1)
+ashFar.Position = UDim2.fromScale(-0.05, 0)
+ashFar.BackgroundTransparency = 1
+ashFar.ZIndex = 3
+ashFar.Parent = root
+
+local ashNear = Instance.new("Frame")
+ashNear.Size = UDim2.fromScale(1.15, 1)
+ashNear.Position = UDim2.fromScale(-0.075, 0)
+ashNear.BackgroundTransparency = 1
+ashNear.ZIndex = 4
+ashNear.Parent = root
+
 local ashColors = {
 	Color3.fromRGB(255, 176, 64),
 	Color3.fromRGB(200, 200, 210),
 	Color3.fromRGB(120, 130, 145),
 }
+
 math.randomseed(os.clock())
-for _ = 1, 34 do
-	local p = Instance.new("Frame")
-	local size = math.random(2, 4)
-	p.Size = UDim2.fromOffset(size, size)
-	p.AnchorPoint = Vector2.new(0.5, 0.5)
-	p.Position = UDim2.new(math.random(), 0, 1.05, 0)
-	p.BackgroundColor3 = ashColors[math.random(#ashColors)]
-	p.BackgroundTransparency = math.random(30, 75) / 100
-	p.BorderSizePixel = 0
-	corner(p, 2)
-	p.ZIndex = 3
-	p.Parent = root
-	local dur = math.random(9, 18)
-	TweenService:Create(p, TweenInfo.new(dur, Enum.EasingStyle.Linear, Enum.EasingDirection.Out, -1, false, math.random(0, 8)), {
-		Position = UDim2.new(math.random(), 0, -0.05, 0),
-	}):Play()
+
+local function spawnAsh(layer, count, minSize, maxSize, minDur, maxDur, baseTransparency)
+	for _ = 1, count do
+		local p = Instance.new("Frame")
+		local size = math.random(minSize, maxSize)
+		p.Size = UDim2.fromOffset(size, size)
+		p.AnchorPoint = Vector2.new(0.5, 0.5)
+		p.Position = UDim2.new(math.random(), 0, 1.05, 0)
+		p.BackgroundColor3 = ashColors[math.random(#ashColors)]
+		p.BackgroundTransparency = math.clamp(baseTransparency + (math.random(-15, 15) / 100), 0, 0.95)
+		p.BorderSizePixel = 0
+		corner(p, 2)
+		p.ZIndex = layer.ZIndex
+		p.Parent = layer
+		local dur = math.random(minDur, maxDur)
+		local drift = math.random(-10, 10) / 100
+		TweenService:Create(p, TweenInfo.new(dur, Enum.EasingStyle.Linear, Enum.EasingDirection.Out, -1, false, math.random(0, 10)), {
+			Position = UDim2.new(p.Position.X.Scale + drift, 0, -0.05, 0),
+		}):Play()
+	end
 end
 
--- ================== ЗАГОЛОВОК ==================
+spawnAsh(ashFar, 22, 2, 3, 14, 22, 0.72)
+spawnAsh(ashNear, 14, 3, 5, 8, 14, 0.5)
+
+-- ================== ПЛЁНОЧНОЕ ЗЕРНО ==================
+local grain = Instance.new("Frame")
+grain.Size = UDim2.fromScale(1, 1)
+grain.BackgroundTransparency = 1
+grain.ZIndex = 40
+grain.Parent = root
+
+for i = 0, 80 do
+	local line = Instance.new("Frame")
+	line.Position = UDim2.fromScale(0, i / 80)
+	line.Size = UDim2.new(1, 0, 0, 1)
+	line.BackgroundColor3 = Color3.new(1, 1, 1)
+	line.BackgroundTransparency = 0.965
+	line.BorderSizePixel = 0
+	line.Parent = grain
+end
+
+local flicker = Instance.new("Frame")
+flicker.Size = UDim2.fromScale(1, 1)
+flicker.BackgroundColor3 = Color3.new(0, 0, 0)
+flicker.BackgroundTransparency = 1
+flicker.BorderSizePixel = 0
+flicker.ZIndex = 41
+flicker.Parent = root
+
+task.spawn(function()
+	while gui.Parent do
+		if gui.Enabled then
+			flicker.BackgroundTransparency = 0.94 + math.random(0, 5) / 100
+			TweenService:Create(flicker, TweenInfo.new(0.12), {
+				BackgroundTransparency = 0.97 + math.random(0, 3) / 100,
+			}):Play()
+		end
+		task.wait(0.1 + math.random(0, 8) / 100)
+	end
+end)
+
+-- ================== ЗАГОЛОВОК: разрядка букв ==================
 local titleBlock = Instance.new("Frame")
 titleBlock.Position = UDim2.new(0, 64, 0, 72)
-titleBlock.Size = UDim2.fromOffset(600, 130)
+titleBlock.Size = UDim2.fromOffset(640, 130)
 titleBlock.BackgroundTransparency = 1
+titleBlock.ZIndex = 10
 titleBlock.Parent = root
 
-local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0, 78)
-title.BackgroundTransparency = 1
-title.Font = Enum.Font.GothamBlack
-title.TextSize = 64
-title.TextColor3 = C_WHITE
-title.TextXAlignment = Enum.TextXAlignment.Left
-title.Text = "WARZONE"
-title.Parent = titleBlock
+local LETTERS = { "W", "A", "R", "Z", "O", "N", "E" }
+local LETTER_W, LETTER_GAP = 46, 22
+local letterLabels = {}
 
-local titleGrad = Instance.new("UIGradient")
-titleGrad.Rotation = 90
-titleGrad.Color = ColorSequence.new({
-	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
-	ColorSequenceKeypoint.new(1, Color3.fromRGB(150, 158, 168)),
-})
-titleGrad.Parent = title
+for i, ch in ipairs(LETTERS) do
+	local l = Instance.new("TextLabel")
+	l.Position = UDim2.fromOffset((i - 1) * (LETTER_W + LETTER_GAP), 0)
+	l.Size = UDim2.fromOffset(LETTER_W, 78)
+	l.BackgroundTransparency = 1
+	l.Font = Enum.Font.GothamBlack
+	l.TextSize = 64
+	l.TextColor3 = C_WHITE
+	l.TextXAlignment = Enum.TextXAlignment.Center
+	l.Text = ch
+	l.Parent = titleBlock
+
+	local lg = Instance.new("UIGradient")
+	lg.Rotation = 90
+	lg.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(150, 158, 168)),
+	})
+	lg.Parent = l
+
+	letterLabels[#letterLabels + 1] = l
+end
 
 local subtitle = Instance.new("TextLabel")
-subtitle.Position = UDim2.new(0, 2, 0, 84)
+subtitle.Position = UDim2.new(0, 2, 0, 86)
 subtitle.Size = UDim2.new(1, 0, 0, 20)
 subtitle.BackgroundTransparency = 1
 subtitle.Font = Enum.Font.GothamBold
@@ -155,17 +244,13 @@ local menuList = Instance.new("Frame")
 menuList.Position = UDim2.new(0, 64, 0.5, -110)
 menuList.Size = UDim2.fromOffset(320, 280)
 menuList.BackgroundTransparency = 1
+menuList.ZIndex = 10
 menuList.Parent = root
 
 local listLayout = Instance.new("UIListLayout")
 listLayout.Padding = UDim.new(0, 14)
 listLayout.SortOrder = Enum.SortOrder.LayoutOrder
 listLayout.Parent = menuList
-
-local clickSound = Instance.new("Sound")
-clickSound.SoundId = "rbxasset://sounds/electronicpingshort.wav"
-clickSound.Volume = 0.4
-clickSound.Parent = gui
 
 local buttons = {}
 
@@ -223,8 +308,7 @@ local function makeButton(order, label, enabled, onClick)
 		TweenService:Create(bar, TweenInfo.new(0.18, Enum.EasingStyle.Quint), {
 			Size = UDim2.fromOffset(6, 30),
 		}):Play()
-		clickSound.PlaybackSpeed = 1.6
-		clickSound:Play()
+		sfx("hover")
 	end)
 	btn.MouseLeave:Connect(function()
 		TweenService:Create(btn, TweenInfo.new(0.18, Enum.EasingStyle.Quint), {
@@ -236,8 +320,7 @@ local function makeButton(order, label, enabled, onClick)
 	end)
 	btn.Activated:Connect(function()
 		if not enabled then return end
-		clickSound.PlaybackSpeed = 0.8
-		clickSound:Play()
+		sfx("click")
 		onClick()
 	end)
 
@@ -254,6 +337,66 @@ if not blur then
 	blur.Parent = Lighting
 end
 
+-- ================== ДЕПЛОЙ-ОВЕРЛЕЙ (Destiny-style) ==================
+local deployOverlay = Instance.new("Frame")
+deployOverlay.Size = UDim2.fromScale(1, 1)
+deployOverlay.BackgroundColor3 = Color3.new(0, 0, 0)
+deployOverlay.BackgroundTransparency = 0.15
+deployOverlay.BorderSizePixel = 0
+deployOverlay.Visible = false
+deployOverlay.ZIndex = 45
+deployOverlay.Parent = root
+
+local deployTitle = Instance.new("TextLabel")
+deployTitle.AnchorPoint = Vector2.new(0.5, 0)
+deployTitle.Position = UDim2.new(0.5, 0, 0.42, 0)
+deployTitle.Size = UDim2.fromOffset(600, 34)
+deployTitle.BackgroundTransparency = 1
+deployTitle.Font = Enum.Font.GothamBlack
+deployTitle.TextSize = 28
+deployTitle.TextColor3 = C_WHITE
+deployTitle.Text = "ПОДГОТОВКА К ВЫСАДКЕ"
+deployTitle.ZIndex = 46
+deployTitle.Parent = deployOverlay
+
+local deployBarBg = Instance.new("Frame")
+deployBarBg.AnchorPoint = Vector2.new(0.5, 0)
+deployBarBg.Position = UDim2.new(0.5, 0, 0.5, 0)
+deployBarBg.Size = UDim2.fromOffset(360, 8)
+deployBarBg.BackgroundColor3 = Color3.fromRGB(30, 34, 40)
+deployBarBg.BorderSizePixel = 0
+deployBarBg.ZIndex = 46
+corner(deployBarBg, 4)
+deployBarBg.Parent = deployOverlay
+
+local deployBarFill = Instance.new("Frame")
+deployBarFill.Size = UDim2.fromScale(0, 1)
+deployBarFill.BackgroundColor3 = C_ACCENT
+deployBarFill.BorderSizePixel = 0
+deployBarFill.ZIndex = 47
+corner(deployBarFill, 4)
+deployBarFill.Parent = deployBarBg
+
+local deployTip = Instance.new("TextLabel")
+deployTip.AnchorPoint = Vector2.new(0.5, 0)
+deployTip.Position = UDim2.new(0.5, 0, 0.55, 0)
+deployTip.Size = UDim2.fromOffset(700, 18)
+deployTip.BackgroundTransparency = 1
+deployTip.Font = Enum.Font.Gotham
+deployTip.TextSize = 13
+deployTip.TextColor3 = C_GREY
+deployTip.Text = "Совет: пластины брони надеваются клавишей 4 — не лезьте в бой без них."
+deployTip.ZIndex = 46
+deployTip.Parent = deployOverlay
+
+local deployTips = {
+	"Совет: пластины брони надеваются клавишей 4 — не лезьте в бой без них.",
+	"Совет: двойной Shift — тактический спринт, но стамина не бесконечна.",
+	"Совет: тиммейта в нокдауне можно поднять на E — не бросайте своих.",
+	"Совет: хедшот наносит двойной урон — цельтесь в голову.",
+	"Совет: в Гулаге победа возвращает вас в бой.",
+}
+
 -- ================== ОТКРЫТИЕ / ЗАКРЫТИЕ ==================
 local blackFlash = Instance.new("Frame")
 blackFlash.Size = UDim2.fromScale(1, 1)
@@ -263,38 +406,74 @@ blackFlash.ZIndex = 50
 blackFlash.BorderSizePixel = 0
 blackFlash.Parent = root
 
+local menuOpenState = false
+
 local function setMenuOpen(open)
+	menuOpenState = open
 	gui.Enabled = true
 	if open then
+		deployOverlay.Visible = false
 		blur.Size = 0
 		TweenService:Create(blur, TweenInfo.new(0.5, Enum.EasingStyle.Quint), { Size = 18 }):Play()
-		root.BackgroundTransparency = 0
+		for i, l in ipairs(letterLabels) do
+			l.TextTransparency = 1
+			l.Position = UDim2.fromOffset((i - 1) * (LETTER_W + LETTER_GAP) + 30, 14)
+			task.delay(0.06 * i, function()
+				TweenService:Create(l, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {
+					TextTransparency = 0,
+					Position = UDim2.fromOffset((i - 1) * (LETTER_W + LETTER_GAP), 0),
+				}):Play()
+			end)
+		end
+		subtitle.TextTransparency = 1
+		task.delay(0.5, function()
+			TweenService:Create(subtitle, TweenInfo.new(0.5), { TextTransparency = 0 }):Play()
+		end)
 		for i, b in ipairs(buttons) do
-			b.btn.Position = UDim2.fromOffset(-24, b.btn.Position.Y.Offset)
 			b.btn.BackgroundTransparency = 1
 			b.txt.TextTransparency = 1
-			task.delay(i * 0.07, function()
-				TweenService:Create(b.btn, TweenInfo.new(0.4, Enum.EasingStyle.Quint), { Position = UDim2.fromOffset(0, b.btn.Position.Y.Offset), BackgroundTransparency = 0.65 }):Play()
+			task.delay(0.12 * i, function()
+				TweenService:Create(b.btn, TweenInfo.new(0.4, Enum.EasingStyle.Quint), { BackgroundTransparency = 0.65 }):Play()
 				TweenService:Create(b.txt, TweenInfo.new(0.4, Enum.EasingStyle.Quint), { TextTransparency = 0 }):Play()
 			end)
 		end
 	else
 		TweenService:Create(blur, TweenInfo.new(0.4), { Size = 0 }):Play()
-		TweenService:Create(blackFlash, TweenInfo.new(0.35), { BackgroundTransparency = 1 }):Play()
 		blackFlash.BackgroundTransparency = 0
+		TweenService:Create(blackFlash, TweenInfo.new(0.35), { BackgroundTransparency = 1 }):Play()
 		task.delay(0.35, function()
-			gui.Enabled = false
+			if not menuOpenState then
+				gui.Enabled = false
+			end
 		end)
 	end
 end
 
+local deploying = false
+
 local function deploy()
-	-- Деплой: вспышка, звук, закрытие
-	clickSound.PlaybackSpeed = 0.6
-	clickSound:Play()
-	blackFlash.BackgroundTransparency = 0
-	TweenService:Create(blackFlash, TweenInfo.new(0.45), { BackgroundTransparency = 1 }):Play()
-	setMenuOpen(false)
+	if deploying then return end
+	deploying = true
+	sfx("deploy")
+	deployOverlay.Visible = true
+	deployOverlay.BackgroundTransparency = 1
+	TweenService:Create(deployOverlay, TweenInfo.new(0.3), { BackgroundTransparency = 0.15 }):Play()
+	deployBarFill.Size = UDim2.fromScale(0, 1)
+	deployTip.Text = deployTips[math.random(#deployTips)]
+	TweenService:Create(deployBarFill, TweenInfo.new(1.4, Enum.EasingStyle.Linear), {
+		Size = UDim2.fromScale(1, 1),
+	}):Play()
+	task.delay(1.4, function()
+		blackFlash.BackgroundTransparency = 0
+		TweenService:Create(blackFlash, TweenInfo.new(0.5), { BackgroundTransparency = 1 }):Play()
+		deployOverlay.Visible = false
+		TweenService:Create(blur, TweenInfo.new(0.4), { Size = 0 }):Play()
+		task.delay(0.4, function()
+			gui.Enabled = false
+			deploying = false
+			menuOpenState = false
+		end)
+	end)
 end
 
 makeButton(1, "В БОЙ", true, deploy)
@@ -310,6 +489,7 @@ modeLine.TextSize = 12
 modeLine.TextColor3 = C_GREY
 modeLine.TextXAlignment = Enum.TextXAlignment.Left
 modeLine.Text = "РЕЖИМ: QUADS · 100 ИГРОКОВ · GULAG ВКЛ."
+modeLine.ZIndex = 10
 modeLine.Parent = root
 
 -- ================== КАРТОЧКА ИГРОКА ==================
@@ -320,6 +500,7 @@ card.Size = UDim2.fromOffset(300, 92)
 card.BackgroundColor3 = C_PANEL
 card.BackgroundTransparency = 0.25
 card.BorderSizePixel = 0
+card.ZIndex = 10
 corner(card, 8)
 stroke(card, Color3.fromRGB(70, 76, 86), 1, 0.55)
 card.Parent = root
@@ -354,7 +535,6 @@ cardName.Text = player.DisplayName
 cardName.Parent = card
 
 local cardSub = Instance.new("TextLabel")
-cardName.Position = UDim2.new(0, 88, 0, 44)
 cardSub.Position = UDim2.new(0, 88, 0, 46)
 cardSub.Size = UDim2.new(1, -100, 0, 16)
 cardSub.BackgroundTransparency = 1
@@ -373,6 +553,7 @@ newsBar.Size = UDim2.new(1, -128, 0, 26)
 newsBar.BackgroundColor3 = C_PANEL
 newsBar.BackgroundTransparency = 0.4
 newsBar.BorderSizePixel = 0
+newsBar.ZIndex = 10
 corner(newsBar, 5)
 newsBar.Parent = root
 
@@ -393,7 +574,7 @@ tickerLabel.Font = Enum.Font.Gotham
 tickerLabel.TextSize = 13
 tickerLabel.TextColor3 = C_GREY
 tickerLabel.TextXAlignment = Enum.TextXAlignment.Left
-tickerLabel.Text = "СЕЗОН 1: ОПЕРАЦИЯ «ASHNA»  ///  НОВОЕ: БРОНЕПЛАСТИНЫ И НОКДАУН  ///  СКОРО: СЖИМАЮЩИЙСЯ КРУГ И ГУЛАГ  ///  СООБЩАЙТЕ О БАГАХ В РАЗРАБОТЧИКУ  ///  "
+tickerLabel.Text = "СЕЗОН 1: ОПЕРАЦИЯ «ASHNA»  ///  НОВОЕ: БРОНЕПЛАСТИНЫ И НОКДАУН  ///  СКОРО: СЖИМАЮЩИЙСЯ КРУГ И ГУЛАГ  ///  СООБЩАЙТЕ О БАГАХ РАЗРАБОТЧИКУ  ///  "
 tickerLabel.Parent = newsBar
 
 local tickerX = 36
@@ -406,7 +587,6 @@ RunService.RenderStepped:Connect(function(dt)
 	tickerLabel.Position = UDim2.fromOffset(tickerX, 0)
 end)
 
--- ================== ВЕРСИЯ / ПОДВАЛ ==================
 local versionLabel = Instance.new("TextLabel")
 versionLabel.AnchorPoint = Vector2.new(1, 1)
 versionLabel.Position = UDim2.new(1, -24, 1, -14)
@@ -417,9 +597,10 @@ versionLabel.TextSize = 11
 versionLabel.TextColor3 = Color3.fromRGB(90, 96, 106)
 versionLabel.TextXAlignment = Enum.TextXAlignment.Right
 versionLabel.Text = VERSION
+versionLabel.ZIndex = 10
 versionLabel.Parent = root
 
--- ================== ПОДСКАЗКА F1 (живёт всегда) ==================
+-- ================== ПОДСКАЗКА F1 ==================
 local hint = Instance.new("TextLabel")
 hint.AnchorPoint = Vector2.new(0, 1)
 hint.Position = UDim2.new(0, 16, 1, -12)
@@ -432,14 +613,40 @@ hint.TextXAlignment = Enum.TextXAlignment.Left
 hint.Text = "F1 — ГЛАВНОЕ МЕНЮ"
 hint.Parent = hintGui
 
+-- ================== ПАРАЛЛАКС: слои дышат от мыши ==================
+local px, py = 0, 0
+local tx, ty = 0, 0
+
+UserInputService.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement then
+		local cam = workspace.CurrentCamera
+		if not cam then return end
+		local vp = cam.ViewportSize
+		tx = (input.Position.X / vp.X - 0.5) * 2
+		ty = (input.Position.Y / vp.Y - 0.5) * 2
+	end
+end)
+
+RunService.RenderStepped:Connect(function(dt)
+	if not gui.Enabled then return end
+	px += (tx - px) * math.min(dt * 6, 1)
+	py += (ty - py) * math.min(dt * 6, 1)
+	titleBlock.Position = UDim2.new(0, 64 + px * -14, 0, 72 + py * -6)
+	ashFar.Position = UDim2.fromScale(-0.05 + px * -0.012, py * -0.008)
+	ashNear.Position = UDim2.fromScale(-0.075 + px * -0.03, py * -0.02)
+	card.Position = UDim2.new(1, -24 + px * 10, 0, 24 + py * 4)
+end)
+
 -- ================== ВВОД ==================
 UserInputService.InputBegan:Connect(function(input, gpe)
 	if gpe then return end
 	if input.KeyCode == Enum.KeyCode.F1 or input.KeyCode == Enum.KeyCode.ButtonSelect then
-		setMenuOpen(not gui.Enabled)
+		if deploying then return end
+		sfx("back")
+		setMenuOpen(not menuOpenState)
 	end
 end)
 
--- ================== СТАРТ: торжественное открытие ==================
+-- ================== СТАРТ ==================
 task.wait(0.2)
 setMenuOpen(true)
