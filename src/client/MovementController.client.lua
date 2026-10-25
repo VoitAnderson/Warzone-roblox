@@ -8,12 +8,17 @@
 --   C / B (тап) — присед, hold — лёжа, во время бега — слайд
 --   Shift / L3 — спринт, двойное нажатие — тактический спринт
 --   Ctrl / B во время бега — слайд
+--
+-- ВАЖНО: скрипт лежит в StarterPlayerScripts, поэтому персонажа берём
+-- через LocalPlayer.Character, а НЕ через script.Parent.
 
 local ContextActionService = game:GetService("ContextActionService")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
 
-local character = script.Parent
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
 local rootPart = character:WaitForChild("HumanoidRootPart")
 
@@ -37,6 +42,7 @@ local MANTLE_MAX_HEIGHT = 8
 local MANTLE_REACH = 4
 local MANTLE_DURATION = 0.35
 local HIP = { STAND = 0, CROUCH = -1.2, PRONE = -2.2 }
+local ADS_SPEED_MULT = 0.55   -- замедление при прицеливании
 -- ============================================
 
 local state = {
@@ -50,6 +56,7 @@ local state = {
 	lastShiftTap = 0,
 	stanceTapTime = 0,
 	lastSlideTime = 0,
+	currentSpeed = WALK_SPEED,
 }
 
 local rayParams = RaycastParams.new()
@@ -61,6 +68,7 @@ local function setStanceAttribute(name)
 end
 
 local function setSpeed(speed)
+	state.currentSpeed = speed
 	humanoid.WalkSpeed = speed
 end
 
@@ -272,6 +280,11 @@ RunService.Heartbeat:Connect(function(dt)
 	end
 
 	rootPart:SetAttribute("Stamina", state.stamina)
+
+	-- ADS: замедление при прицеливании (атрибут ставит WeaponClient)
+	if rootPart:GetAttribute("ADS") and not state.mantling and not state.sliding then
+		humanoid.WalkSpeed = state.currentSpeed * ADS_SPEED_MULT
+	end
 
 	-- Слайд прерывается, если скорость упала
 	if state.sliding and rootPart.AssemblyLinearVelocity.Magnitude < 10 then
