@@ -5,6 +5,7 @@
 -- • плёночное зерно: сканлайны + мерцание
 -- • единая звуковая связка: ховер выше тоном, клик ниже, деплой — бас
 -- • деплой-последовательность (прогресс + вспышка)
+-- • ФОН ПОЛУПРОЗРАЧНЫЙ — за меню видна живая 3D-сцена (MenuSceneController)
 -- F1 — открыть/закрыть меню.
 
 local Players = game:GetService("Players")
@@ -22,7 +23,7 @@ local C_WHITE   = Color3.fromRGB(235, 240, 245)
 local C_GREY    = Color3.fromRGB(140, 148, 158)
 local C_AMBER   = Color3.fromRGB(255, 176, 64)
 local C_ACCENT  = Color3.fromRGB(80, 255, 120)
-local VERSION   = "v0.3.0 · PHASE 3"
+local VERSION   = "v0.4.0 · PHASE 3+"
 -- ==========================================
 
 local gui = Instance.new("ScreenGui")
@@ -71,10 +72,11 @@ local function sfx(kind)
 	srcSound:Play()
 end
 
--- ================== ФОН ==================
+-- ================== ФОН (полупрозрачный: за ним 3D-сцена) ==================
 local root = Instance.new("Frame")
 root.Size = UDim2.fromScale(1, 1)
 root.BackgroundColor3 = C_BG
+root.BackgroundTransparency = 0.62
 root.BorderSizePixel = 0
 root.ClipsDescendants = true
 root.Parent = gui
@@ -340,7 +342,7 @@ local function makeButton(order, label, enabled, onClick)
 	return btn
 end
 
--- ================== БЛЮР 3D-СЦЕНЫ ==================
+-- ================== БЛЮР 3D-СЦЕНЫ (мягкий, сцена читается) ==================
 local blur = Lighting:FindFirstChild("MenuBlur")
 if not blur then
 	blur = Instance.new("BlurEffect")
@@ -426,7 +428,7 @@ local function setMenuOpen(open)
 	if open then
 		deployOverlay.Visible = false
 		blur.Size = 0
-		TweenService:Create(blur, TweenInfo.new(0.5, Enum.EasingStyle.Quint), { Size = 18 }):Play()
+		TweenService:Create(blur, TweenInfo.new(0.5, Enum.EasingStyle.Quint), { Size = 6 }):Play()
 		for i, l in ipairs(letterLabels) do
 			l.TextTransparency = 1
 			l.Position = UDim2.fromOffset((i - 1) * (LETTER_W + LETTER_GAP) + 30, 14)
