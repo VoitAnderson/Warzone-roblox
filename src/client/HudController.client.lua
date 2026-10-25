@@ -297,13 +297,14 @@ end
 if player.Character then bind(player.Character) end
 player.CharacterAdded:Connect(bind)
 
--- ===== ВВОД: пластины (4) и ревайв (E) =====
+-- ===== ВВОД: пластины (4 / DPadUp) и ревайв (E / X) =====
 UserInputService.InputBegan:Connect(function(input, gpe)
 	if gpe then return end
-	if input.KeyCode == Enum.KeyCode.Four or input.KeyCode == Enum.KeyCode.ButtonDUp then
+	local kc = input.KeyCode
+	if kc == Enum.KeyCode.Four or kc == Enum.KeyCode.DPadUp then
 		local r = Remotes:FindFirstChild("RequestPlate")
 		if r then r:FireServer() end
-	elseif input.KeyCode == Enum.KeyCode.E or input.KeyCode == Enum.KeyCode.ButtonX then
+	elseif kc == Enum.KeyCode.E or kc == Enum.KeyCode.ButtonX then
 		local myChar = player.Character
 		local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
 		local r = Remotes:FindFirstChild("RequestRevive")
