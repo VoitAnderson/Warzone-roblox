@@ -2,16 +2,19 @@
 -- Читает атрибут Stance с HumanoidRootPart (ставит MovementController)
 -- и проигрывает соответствующие клипы из AnimationsData.
 -- Приоритет Action — перекрывает стандартный Animate-скрипт Roblox.
+--
+-- ВАЖНО: скрипт лежит в StarterPlayerScripts, поэтому персонажа берём
+-- через LocalPlayer.Character (script.Parent здесь = PlayerScripts).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
 
 local AnimationsData = require(ReplicatedStorage.Shared:WaitForChild("AnimationsData"))
 
-local character = script.Parent
-local humanoid = character:WaitForChild("Humanoid")
-local rootPart = character:WaitForChild("HumanoidRootPart")
-local animator = humanoid:WaitForChild("Animator")
+local player = Players.LocalPlayer
+
+local character, humanoid, rootPart, animator
 
 -- Кэш треков
 local tracks = {}
@@ -30,6 +33,7 @@ end
 
 local current = nil
 local oneShotPlaying = {}
+local diedConn = nil
 
 -- Стойка -> клипы
 local stanceClips = {
@@ -56,7 +60,26 @@ local function play(track)
 	end
 end
 
+-- Привязка персонажа (работает и на респауне)
+local function bind(char)
+	character = char
+	humanoid = char:WaitForChild("Humanoid")
+	rootPart = char:WaitForChild("HumanoidRootPart")
+	animator = humanoid:WaitForChild("Animator")
+	-- Новый персонаж = новый Animator: кэш треков и состояние сбрасываем
+	table.clear(tracks)
+	stopCurrent()
+	table.clear(oneShotPlaying)
+	if diedConn then diedConn:Disconnect() end
+	diedConn = humanoid.Died:Connect(stopCurrent)
+end
+
+if player.Character then bind(player.Character) end
+player.CharacterAdded:Connect(bind)
+
 RunService.Heartbeat:Connect(function()
+	if not (rootPart and rootPart.Parent) then return end
+
 	local stance = rootPart:GetAttribute("Stance")
 	if not stance then return end
 
@@ -84,8 +107,4 @@ RunService.Heartbeat:Connect(function()
 	-- Фолбэк: если walk-клипа нет, играем idle
 	local track = getTrack(clipName) or getTrack(clips.idle)
 	play(track)
-end)
-
-humanoid.Died:Connect(function()
-	stopCurrent()
 end)
