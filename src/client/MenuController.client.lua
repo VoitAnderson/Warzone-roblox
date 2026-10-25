@@ -1,10 +1,10 @@
 -- StarterPlayer > StarterPlayerScripts > Client > MenuController (LocalScript)
--- AAA ГЛАВНОЕ МЕНЮ v2 — по канонам топовых арт-директоров:
--- • разрядка букв в заголовке (COD-style tracking)
+-- ГЛАВНОЕ МЕНЮ — OMEGA PROTOCOL // ZERO:
+-- • разрядка букв в заголовке (OMEGA) + суффикс PROTOCOL
 -- • параллакс глубины: 2 слоя пепла + заголовок реагируют на мышь
--- • плёночное зерно: сканлайны + мерцание (Cyberpunk / Ash Thorp)
+-- • плёночное зерно: сканлайны + мерцание
 -- • единая звуковая связка: ховер выше тоном, клик ниже, деплой — бас
--- • деплой-последовательность в стиле Destiny (прогресс + вспышка)
+-- • деплой-последовательность (прогресс + вспышка)
 -- F1 — открыть/закрыть меню.
 
 local Players = game:GetService("Players")
@@ -193,7 +193,7 @@ task.spawn(function()
 	end
 end)
 
--- ================== ЗАГОЛОВОК: разрядка букв ==================
+-- ================== ЗАГОЛОВОК: OMEGA PROTOCOL // ZERO ==================
 local titleBlock = Instance.new("Frame")
 titleBlock.Position = UDim2.new(0, 64, 0, 72)
 titleBlock.Size = UDim2.fromOffset(640, 130)
@@ -201,7 +201,7 @@ titleBlock.BackgroundTransparency = 1
 titleBlock.ZIndex = 10
 titleBlock.Parent = root
 
-local LETTERS = { "W", "A", "R", "Z", "O", "N", "E" }
+local LETTERS = { "O", "M", "E", "G", "A" }
 local LETTER_W, LETTER_GAP = 46, 22
 local letterLabels = {}
 
@@ -228,6 +228,18 @@ for i, ch in ipairs(LETTERS) do
 	letterLabels[#letterLabels + 1] = l
 end
 
+-- Суффикс «PROTOCOL» справа от OMEGA
+local titleSuffix = Instance.new("TextLabel")
+titleSuffix.Position = UDim2.fromOffset(#LETTERS * (LETTER_W + LETTER_GAP) + 16, 24)
+titleSuffix.Size = UDim2.fromOffset(240, 42)
+titleSuffix.BackgroundTransparency = 1
+titleSuffix.Font = Enum.Font.GothamBlack
+titleSuffix.TextSize = 34
+titleSuffix.TextColor3 = C_AMBER
+titleSuffix.TextXAlignment = Enum.TextXAlignment.Left
+titleSuffix.Text = "PROTOCOL"
+titleSuffix.Parent = titleBlock
+
 local subtitle = Instance.new("TextLabel")
 subtitle.Position = UDim2.new(0, 2, 0, 86)
 subtitle.Size = UDim2.new(1, 0, 0, 20)
@@ -236,7 +248,7 @@ subtitle.Font = Enum.Font.GothamBold
 subtitle.TextSize = 14
 subtitle.TextColor3 = C_AMBER
 subtitle.TextXAlignment = Enum.TextXAlignment.Left
-subtitle.Text = "TACTICAL BATTLE ROYALE  //  ОПЕРАЦИЯ «ASHNA»"
+subtitle.Text = "// ZERO  ·  TACTICAL BATTLE ROYALE"
 subtitle.Parent = titleBlock
 
 -- ================== КНОПКИ ==================
@@ -337,7 +349,7 @@ if not blur then
 	blur.Parent = Lighting
 end
 
--- ================== ДЕПЛОЙ-ОВЕРЛЕЙ (Destiny-style) ==================
+-- ================== ДЕПЛОЙ-ОВЕРЛЕЙ ==================
 local deployOverlay = Instance.new("Frame")
 deployOverlay.Size = UDim2.fromScale(1, 1)
 deployOverlay.BackgroundColor3 = Color3.new(0, 0, 0)
@@ -425,6 +437,12 @@ local function setMenuOpen(open)
 				}):Play()
 			end)
 		end
+		titleSuffix.TextTransparency = 1
+		task.delay(0.06 * (#LETTERS + 1), function()
+			TweenService:Create(titleSuffix, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {
+				TextTransparency = 0,
+			}):Play()
+		end)
 		subtitle.TextTransparency = 1
 		task.delay(0.5, function()
 			TweenService:Create(subtitle, TweenInfo.new(0.5), { TextTransparency = 0 }):Play()
@@ -574,7 +592,7 @@ tickerLabel.Font = Enum.Font.Gotham
 tickerLabel.TextSize = 13
 tickerLabel.TextColor3 = C_GREY
 tickerLabel.TextXAlignment = Enum.TextXAlignment.Left
-tickerLabel.Text = "СЕЗОН 1: ОПЕРАЦИЯ «ASHNA»  ///  НОВОЕ: БРОНЕПЛАСТИНЫ И НОКДАУН  ///  СКОРО: СЖИМАЮЩИЙСЯ КРУГ И ГУЛАГ  ///  СООБЩАЙТЕ О БАГАХ РАЗРАБОТЧИКУ  ///  "
+tickerLabel.Text = "OMEGA PROTOCOL // ZERO  ///  СЕЗОН ZERO: ПРОТОКОЛ АКТИВЕН  ///  НОВОЕ: БРОНЕПЛАСТИНЫ И НОКДАУН  ///  СКОРО: СЖИМАЮЩИЙСЯ КРУГ И ГУЛАГ  ///  СООБЩАЙТЕ О БАГАХ РАЗРАБОТЧИКУ  ///  "
 tickerLabel.Parent = newsBar
 
 local tickerX = 36
