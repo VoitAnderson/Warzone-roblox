@@ -30,7 +30,7 @@ RunService.Heartbeat:Connect(function()
 				Enum.KeyCode.R, Enum.KeyCode.ButtonX,
 				Enum.KeyCode.LeftShift, Enum.KeyCode.ButtonL3,
 				Enum.KeyCode.C, Enum.KeyCode.ButtonB,
-				Enum.KeyCode.Four, Enum.KeyCode.ButtonDUp)
+				Enum.KeyCode.Four, Enum.KeyCode.DPadUp)
 		end
 	elseif bound then
 		bound = false
